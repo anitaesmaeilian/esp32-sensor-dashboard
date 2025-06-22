@@ -1,28 +1,62 @@
 import streamlit as st
 import pandas as pd
+import requests
+import io
 from datetime import datetime
 
-# Your actual Google Sheets CSV URL here
-sheet_url = "https://docs.google.com/spreadsheets/d/1W58Fb7zDH0tyi6Sk8SAh5QEMQZtTvtgMAYtVIkHI13k/gviz/tq?tqx=out:csv&sheet=<Sheet1>"
+# Your Google Sheets ID here
+SHEET_ID = "1W58Fb7zDH0tyi6Sk8SAh5QEMQZtTvtgMAYtVIkHI13k"
 
-df = pd.read_csv(sheet_url)
+# Map setup names to sheet tab names
+SETUPS = {
+    "Setup 1": "Sheet1",
+    "Setup 2": "Sheet2"
+}
 
-# Use the exact column name 'Timestamp' (capital T)
-df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+# Function to load data from a given sheet tab
+@st.cache_data(ttl=300)
+def load_data(sheet_name):
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+    response = requests.get(url)
+    response.raise_for_status()
+    df = pd.read_csv(io.StringIO(response.text))
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    return df
 
 st.title("🌿 ESP32 Sensor Dashboard")
 
-# Latest readings
-latest = df.iloc[-1]
-st.metric("🌡️ Temperature (°C)", f"{latest['Temperature']:.1f}")
-st.metric("💧 Humidity (%)", f"{latest['Humidity']:.1f}")
-st.metric("🪴 Soil Moisture", f"{latest['SoilMoisture']}")
+# 1) Select setup
+setup_choice = st.selectbox("Select Setup", options=list(SETUPS.keys()))
+sheet_name = SETUPS[setup_choice]
 
-# Temperature line chart over time (using exact 'Timestamp')
-st.subheader("📈 Temperature Over Time")
-st.line_chart(df.set_index('Timestamp')['Temperature'])
+# Load data for selected setup
+try:
+    data = load_data(sheet_name)
+except Exception as e:
+    st.error(f"Error loading data for {setup_choice}: {e}")
+    st.stop()
 
-# Feedback survey
+# 2) Select variable (all columns except Timestamp, dynamically)
+variables = list(data.columns)
+variables.remove('Timestamp')
+variable_choice = st.selectbox("Select variable to display", options=variables)
+
+# 3) Select date (filter by day)
+min_date = data['Timestamp'].dt.date.min()
+max_date = data['Timestamp'].dt.date.max()
+selected_date = st.date_input("Select date", value=min_date, min_value=min_date, max_value=max_date)
+
+# Filter data by selected date
+filtered_data = data[data['Timestamp'].dt.date == selected_date]
+
+if filtered_data.empty:
+    st.warning("No data available for the selected date.")
+else:
+    st.subheader(f"{variable_choice} on {selected_date} for {setup_choice}")
+    st.line_chart(filtered_data.set_index('Timestamp')[variable_choice])
+    st.dataframe(filtered_data[['Timestamp', variable_choice]])
+
+# Survey form
 st.subheader("📝 Feedback Survey")
 name = st.text_input("Your name or initials (optional)")
 rating = st.slider("How helpful is this dashboard?", 1, 5)
@@ -31,7 +65,8 @@ comments = st.text_area("Any suggestions or feedback?")
 if st.button("Submit Feedback"):
     with open("feedback.csv", "a") as f:
         now = datetime.now().isoformat()
-        f.write(f"{now},{name},{rating},{comments}\n")
+        safe_comments = comments.replace(",", ";")
+        f.write(f"{now},{name},{setup_choice},{variable_choice},{selected_date},{rating},{safe_comments}\n")
     st.success("Thank you for your feedback!")
 
 st.markdown("🔒 This dashboard reads data from Google Sheets and stores feedback locally.")
