@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # Your actual Google Sheets CSV URL here
-sheet_url = "https://docs.google.com/spreadsheets/d/1W58Fb7zDH0tyi6Sk8SAh5QEMQZtTvtgMAYtVIkHI13k/edit?usp=sharing"
+sheet_url = "https://docs.google.com/spreadsheets/d/1W58Fb7zDH0tyi6Sk8SAh5QEMQZtTvtgMAYtVIkHI13k/gviz/tq?tqx=out:csv&sheet=<Sheet1>"
 
 df = pd.read_csv(sheet_url)
 
