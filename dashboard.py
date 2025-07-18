@@ -23,6 +23,17 @@ def load_data(sheet_name):
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     return df
 
+# Function to read the crop type from cell G1
+@st.cache_data(ttl=300)
+def load_crop_type(sheet_name):
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+    response = requests.get(url)
+    response.raise_for_status()
+    df = pd.read_csv(io.StringIO(response.text), header=None)
+    if df.shape[1] >= 7:
+        return df.iloc[0, 6]  # Column G is index 6
+    return "Unknown"
+
 st.title("🌿 ESP32 Sensor Dashboard")
 
 # 1) Select setup
@@ -32,9 +43,13 @@ sheet_name = SETUPS[setup_choice]
 # Load data for selected setup
 try:
     data = load_data(sheet_name)
+    crop_type = load_crop_type(sheet_name)
 except Exception as e:
     st.error(f"Error loading data for {setup_choice}: {e}")
     st.stop()
+
+# Display crop type from cell G1
+st.info(f"🌾 **Crop Type**: {crop_type}")
 
 # 2) Select variable (all columns except Timestamp, dynamically)
 variables = list(data.columns)
