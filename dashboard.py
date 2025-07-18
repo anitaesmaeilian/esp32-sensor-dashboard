@@ -86,27 +86,17 @@ Please rate the following statements on a scale from **1 (Strongly Disagree)** t
 role = st.radio("Are you a:", ["Farmer", "Student"])
 name = st.text_input("Your name or initials (optional)")
 
-# Overall rating
-overall_rating = st.slider("Overall, how helpful is this dashboard?", 1, 5)
-
-# Shared questions
-shared_questions = [
-    "The dashboard is useful for understanding plant/environmental health.",
-    "The workshop helped me understand how this system works.",
-    "I would recommend this system to others."
-]
-
 # Role-specific questions
 farmer_questions = [
-    "The dashboard helps me understand my farm's environmental conditions.",
-    "The setup is easy to understand and use in a farming environment.",
     "I feel more confident making farming decisions using this data.",
+    "The setup is easy to understand and use in a farming environment.",
+    "The dashboard helps me understand my farm's environmental conditions.",
     "The workshop helped me learn how to use this system on my farm.",
     "I would adopt this system on my own farm."
 ]
 
 student_questions = [
-    "I understand how environmental sensors work after using this dashboard.",
+    "I understand how environmental sensors work after the workshops and using this dashboard.",
     "The dashboard helped me connect theory to real-world plant care.",
     "I feel confident explaining how the system collects and displays data.",
     "The workshop helped me learn how to build and use the setup.",
@@ -114,12 +104,15 @@ student_questions = [
 ]
 
 # Combine questions
-questions = shared_questions + (farmer_questions if role == "Farmer" else student_questions)
+questions = farmer_questions if role == "Farmer" else student_questions
 
 # Collect ratings
 responses = {}
 for i, q in enumerate(questions, start=1):
     responses[f"Q{i}"] = st.slider(q, 1, 5, key=q)
+
+# Overall rating
+overall_rating = st.slider("Overall, how helpful is this dashboard?", 1, 5)
 
 # Optional comment
 extra_comments = st.text_area("Anything else you'd like to share? (optional)")
