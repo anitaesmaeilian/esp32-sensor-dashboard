@@ -73,15 +73,36 @@ else:
 
 # Survey form
 st.subheader("📝 Feedback Survey")
-name = st.text_input("Your name or initials (optional)")
-rating = st.slider("How helpful is this dashboard?", 1, 5)
-comments = st.text_area("Any suggestions or feedback?")
 
+# Role selection
+role = st.radio("Are you a:", ["Farmer", "Student"])
+
+name = st.text_input("Your name or initials (optional)")
+
+# Common rating question
+rating = st.slider("How helpful is this dashboard?", 1, 5)
+
+# Role-specific questions
+if role == "Farmer":
+    usage = st.text_area("How do you use this data to support your farming decisions?")
+    suggestion = st.text_area("What features would help make this tool more useful on your farm?")
+elif role == "Student":
+    learning = st.text_area("What did you learn from using this dashboard?")
+    idea = st.text_area("What could make this dashboard a better learning tool?")
+
+# Submit
 if st.button("Submit Feedback"):
+    now = datetime.now().isoformat()
+    comments = ""
+
+    if role == "Farmer":
+        comments = f"Usage: {usage.replace(',', ';')} | Suggestion: {suggestion.replace(',', ';')}"
+    elif role == "Student":
+        comments = f"Learning: {learning.replace(',', ';')} | Idea: {idea.replace(',', ';')}"
+
     with open("feedback.csv", "a") as f:
-        now = datetime.now().isoformat()
-        safe_comments = comments.replace(",", ";")
-        f.write(f"{now},{name},{setup_choice},{variable_choice},{selected_date},{rating},{safe_comments}\n")
+        f.write(f"{now},{name},{role},{setup_choice},{variable_choice},{selected_date},{rating},{comments}\n")
+
     st.success("Thank you for your feedback!")
 
 st.markdown("🔒 This dashboard reads data from Google Sheets and stores feedback locally.")
