@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import io
 from datetime import datetime
+import os
 
 # Your Google Sheets ID here
 SHEET_ID = "1W58Fb7zDH0tyi6Sk8SAh5QEMQZtTvtgMAYtVIkHI13k"
@@ -71,37 +72,76 @@ else:
     st.line_chart(filtered_data.set_index('Timestamp')[variable_choice])
     st.dataframe(filtered_data[['Timestamp', variable_choice]])
 
-# Survey form
+# ---------------------------------------
+# Feedback Survey
+# ---------------------------------------
 st.subheader("📝 Feedback Survey")
+
+st.markdown("""
+We'd love your feedback to help improve this dashboard and the hands-on workshops associated with it.
+Please rate the following statements on a scale from **1 (Strongly Disagree)** to **5 (Strongly Agree)**.
+""")
 
 # Role selection
 role = st.radio("Are you a:", ["Farmer", "Student"])
-
 name = st.text_input("Your name or initials (optional)")
 
-# Common rating question
-rating = st.slider("How helpful is this dashboard?", 1, 5)
+# Overall rating
+overall_rating = st.slider("Overall, how helpful is this dashboard?", 1, 5)
+
+# Shared questions
+shared_questions = [
+    "The dashboard is useful for understanding plant/environmental health.",
+    "The workshop helped me understand how this system works.",
+    "I would recommend this system to others."
+]
 
 # Role-specific questions
-if role == "Farmer":
-    usage = st.text_area("How do you use this data to support your farming decisions?")
-    suggestion = st.text_area("What features would help make this tool more useful on your farm?")
-elif role == "Student":
-    learning = st.text_area("What did you learn from using this dashboard?")
-    idea = st.text_area("What could make this dashboard a better learning tool?")
+farmer_questions = [
+    "The dashboard helps me understand my farm's environmental conditions.",
+    "The setup is easy to understand and use in a farming environment.",
+    "I feel more confident making farming decisions using this data.",
+    "The workshop helped me learn how to use this system on my farm.",
+    "I would adopt this system on my own farm."
+]
 
-# Submit
+student_questions = [
+    "I understand how environmental sensors work after using this dashboard.",
+    "The dashboard helped me connect theory to real-world plant care.",
+    "I feel confident explaining how the system collects and displays data.",
+    "The workshop helped me learn how to build and use the setup.",
+    "I would like to participate in more projects like this."
+]
+
+# Combine questions
+questions = shared_questions + (farmer_questions if role == "Farmer" else student_questions)
+
+# Collect ratings
+responses = {}
+for i, q in enumerate(questions, start=1):
+    responses[f"Q{i}"] = st.slider(q, 1, 5, key=q)
+
+# Optional comment
+extra_comments = st.text_area("Anything else you'd like to share? (optional)")
+
+# Submit feedback
 if st.button("Submit Feedback"):
     now = datetime.now().isoformat()
-    comments = ""
+    feedback_line = f"{now},{name},{role},{setup_choice},{variable_choice},{selected_date},{overall_rating}"
+    for i in range(1, len(questions) + 1):
+        feedback_line += f",{responses[f'Q{i}']}"
+    feedback_line += f",\"{extra_comments.replace(',', ';')}\"\n"
 
-    if role == "Farmer":
-        comments = f"Usage: {usage.replace(',', ';')} | Suggestion: {suggestion.replace(',', ';')}"
-    elif role == "Student":
-        comments = f"Learning: {learning.replace(',', ';')} | Idea: {idea.replace(',', ';')}"
+    header = "Timestamp,Name,Role,Setup,Variable,Date,Overall Rating"
+    for i in range(1, len(questions) + 1):
+        header += f",Q{i}"
+    header += ",Comments\n"
 
+    file_exists = os.path.exists("feedback.csv")
     with open("feedback.csv", "a") as f:
-        f.write(f"{now},{name},{role},{setup_choice},{variable_choice},{selected_date},{rating},{comments}\n")
+        if not file_exists:
+            f.write(header)
+        f.write(feedback_line)
 
     st.success("Thank you for your feedback!")
 
